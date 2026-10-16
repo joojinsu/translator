@@ -252,21 +252,23 @@ class ScreenOverlayTranslator:
             self.toolbar,
             text="✕",
             font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
-            width=22,
+            width=24,
             height=22,
-            corner_radius=10,
+            corner_radius=11,
             fg_color="transparent",
             hover_color="#ef4444",
-            text_color="#94a3b8",
+            text_color="#cbd5e1",
             command=self.close
         )
-        btn_close.pack(side="left", padx=(2, 6), pady=3)
+        btn_close.pack(side="left", padx=(2, 8), pady=3)
 
-        toolbar_w = 240 if self.on_open_details else 180
-        tb_x = max(toolbar_w // 2 + 6, self.width - toolbar_w // 2 - 8)
-        tb_y = 18
+        # Pin toolbar to the top-right corner of the overlay canvas with an 8px margin.
+        # Using anchor="ne" locks the North-East corner at (self.width - 8, 8),
+        # ensuring the close button (✕) on the right edge is never clipped or pushed outside the window.
+        tb_x = self.width - 8
+        tb_y = 8
 
-        self.toolbar_window_id = self.canvas.create_window(tb_x, tb_y, window=self.toolbar)
+        self.toolbar_window_id = self.canvas.create_window(tb_x, tb_y, window=self.toolbar, anchor="ne")
 
     def _toggle_view(self):
         if not self.trans_photo:

@@ -69,6 +69,7 @@ class ModernTranslatorApp:
         self.ui_queue = queue.Queue()
         self.last_captured_img = None
         self.last_bbox = None
+        self.is_capturing = False
 
         # Engine init
         self.ocr_engine = OCREngine(languages=self.settings.get("ocr_languages", ["ko", "en"]))
@@ -621,6 +622,10 @@ class ModernTranslatorApp:
         self.ui_queue.put(("PROCESS_IMAGE", (img, None)))
 
     def start_capture(self):
+        if getattr(self, "is_capturing", False):
+            print("[App] Capture already active, ignoring duplicate trigger.")
+            return
+
         if not self.ocr_engine.is_ready():
             if self.ocr_engine._is_loading:
                 self.status_lbl.configure(text="EasyOCR 모델을 아직 로딩 중입니다. 잠시만 기다려 주세요.", text_color=("#d97706", "#f59e0b"))
@@ -629,12 +634,26 @@ class ModernTranslatorApp:
                 self.status_lbl.configure(text="EasyOCR 초기화 오류 상태입니다. 로그를 확인하세요.", text_color="#ef4444")
                 return
 
-        overlay = CaptureOverlay(
-            on_capture_complete=self.process_captured_image,
-            on_cancel=lambda err=None: self.status_lbl.configure(
+        # Close existing screen overlay before taking a new screenshot
+        if hasattr(self, 'screen_overlay') and self.screen_overlay:
+            self.screen_overlay.close()
+
+        self.is_capturing = True
+
+        def _on_complete(img, bbox):
+            self.is_capturing = False
+            self.process_captured_image(img, bbox)
+
+        def _on_cancel(err=None):
+            self.is_capturing = False
+            self.status_lbl.configure(
                 text=err if err else "캡처가 취소되었습니다.",
                 text_color=("#64748b", "#94a3b8") if not err else "#ef4444"
             )
+
+        overlay = CaptureOverlay(
+            on_capture_complete=_on_complete,
+            on_cancel=_on_cancel
         )
         overlay.start_capture()
 
@@ -741,7 +760,8 @@ class ModernTranslatorApp:
                     self.progress_bar.set(0)
                     self.status_lbl.configure(text=payload, text_color="#ef4444")
                 elif msg_type == "TRIGGER_CAPTURE":
-                    self.start_capture()
+                    if not getattr(self, "is_capturing", False):
+                        self.start_capture()
                 elif msg_type == "PROCESS_IMAGE":
                     img, bbox = payload
                     self.process_captured_image(img, bbox)

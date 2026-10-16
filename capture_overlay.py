@@ -173,7 +173,7 @@ class CaptureOverlay:
         self.canvas.itemconfig(self.dim_text_id, text=f"{w} × {h} px")
 
     def on_button_release(self, event):
-        if self.start_x_root is None or self.start_y_root is None:
+        if not self.overlay_window or self.start_x_root is None or self.start_y_root is None:
             self.cancel_capture()
             return
 
@@ -182,8 +182,15 @@ class CaptureOverlay:
         x2_root = max(self.start_x_root, event.x_root)
         y2_root = max(self.start_y_root, event.y_root)
 
-        self.overlay_window.destroy()
-        self.overlay_window = None
+        self.start_x_root = None
+        self.start_y_root = None
+
+        if self.overlay_window:
+            try:
+                self.overlay_window.destroy()
+            except Exception:
+                pass
+            self.overlay_window = None
 
         if (x2_root - x1_root) < 10 or (y2_root - y1_root) < 10:
             if self.on_cancel:
@@ -222,8 +229,13 @@ class CaptureOverlay:
                 self.on_cancel(f"영역 캡처 오류: {e}")
 
     def cancel_capture(self, event=None):
+        self.start_x_root = None
+        self.start_y_root = None
         if self.overlay_window:
-            self.overlay_window.destroy()
+            try:
+                self.overlay_window.destroy()
+            except Exception:
+                pass
             self.overlay_window = None
         if self.on_cancel:
             self.on_cancel("캡처가 취소되었습니다.")

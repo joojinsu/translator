@@ -12,6 +12,7 @@ class HotkeyManager:
         self.is_monitoring_clipboard = False
         self.last_clipboard_hash = None
         self.hotkey_str = "<ctrl>+<alt>+t"
+        self._last_trigger_time = 0.0
 
     def start_hotkey(self, hotkey_str="<ctrl>+<alt>+t"):
         self.stop_hotkey()
@@ -30,6 +31,11 @@ class HotkeyManager:
             return False
 
     def _on_hotkey(self):
+        now = time.time()
+        # Debounce: prevent multiple triggers from typematic repeat or modifier oscillation
+        if now - getattr(self, "_last_trigger_time", 0.0) < 0.8:
+            return
+        self._last_trigger_time = now
         print("[HotkeyManager] Hotkey triggered!")
         if self.on_hotkey_triggered:
             self.on_hotkey_triggered()
